@@ -1,0 +1,240 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  buyer            Buyer?
+  manufacturer     Manufacturer?
+  messages         Message[]
+  invoices         Invoice[]
+  LegalDocument    LegalDocument[]
+  financialRecords FinancialRecord[]
+  auditLogs        AuditLog[]
+}
+
+enum Role {
+  BUYER
+  MANUFACTURER
+}
+
+model Buyer {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id])
+  inquiries Inquiry[]
+  orders    Order[]
+}
+
+model Manufacturer {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id])
+  companyName      String?  // Optional for onboarding
+  isVerified       Boolean  @default(false)
+  factoryDetails   String?
+  certificates     String[] // S3 URLs
+  gallery          String[] // Media URLs
+  introVideo       String?  // S3 video URL
+  keywords         String[] // For searching and categorization
+  isViewedByStaff  Boolean  @default(false)
+  gstin            String?  @unique
+  verifiedGstName  String?
+  gstinVerifiedAt  DateTime? 
+
+  products         Product[]
+  invoices         Invoice[]
+  orders           Order[]
+  inquiries        Inquiry[]
+  legalDocuments   LegalDocument[] @relation("ManufacturerLegalDocuments")
+}
+
+
+model Product {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique // Crucial: must be unique for public URLs
+
+  description      String
+  baseUnit         String // e.g., "kg", "ml", "piece"
+  unitPrice        Float // price per base unit (e.g., ₹20/kg)
+  deliveryTimeDays Int
+  tags             String[]
+  mediaUrls        String[]
+  specSheetUrl     String?
+  isPaused         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  manufacturerId String
+  manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id])
+
+  orders    Order[]
+  inquiries Inquiry[]
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  buyerId        String
+  manufacturerId String
+  productId      String
+  quantity       Float // Can be fractional for units like kg or liters
+  totalPrice     Float // Final calculated or negotiated price
+  status         OrderStatus
+  createdAt      DateTime    @default(now())
+
+  buyer        Buyer        @relation(fields: [buyerId], references: [id])
+  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
+  product      Product      @relation(fields: [productId], references: [id])
+  messages     Message[]
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Invoice {
+  id             String   @id @default(cuid())
+  manufacturerId String
+  userId         String
+  amount         Float
+  details        String
+  pdfUrl         String // S3 URL
+  createdAt      DateTime @default(now())
+
+  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  senderId  String
+  orderId   String
+  content   String
+  mediaUrl  String? // Optional file
+  createdAt DateTime @default(now())
+
+  sender User  @relation(fields: [senderId], references: [id])
+  order  Order @relation(fields: [orderId], references: [id])
+}
+
+model LegalDocument {
+  id             String   @id @default(cuid())
+  title          String
+  url            String // S3 URL
+  uploaderId     String
+  manufacturerId String
+  createdAt      DateTime @default(now())
+
+  uploader     User         @relation(fields: [uploaderId], references: [id])
+  manufacturer Manufacturer @relation("ManufacturerLegalDocuments", fields: [manufacturerId], references: [id])
+}
+
+model FinancialRecord {
+  id          String        @id @default(cuid())
+  userId      String
+  type        FinancialType
+  amount      Float
+  description String
+  createdAt   DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum FinancialType {
+  BNPL
+  PAYMENT
+  FACTORING
+  REFUND
+  OTHER
+}
+
+model Admin {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String
+  name      String
+  role      AdminRole @default(STAFF)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  auditLogs AuditLog[]
+}
+
+enum AdminRole {
+  SUPERADMIN
+  STAFF
+  MODERATOR
+}
+
+model CMSContent {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  body      String
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorUserId  String? // Optional: could be a user or admin
+  actorAdminId String? // Optional
+  action       String // e.g., 'USER_APPROVED', 'PRODUCT_DELETED'
+  resource     String // e.g., 'User', 'Product', 'Invoice'
+  resourceId   String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  actorUser  User?  @relation(fields: [actorUserId], references: [id])
+  actorAdmin Admin? @relation(fields: [actorAdminId], references: [id])
+}
+
+model Inquiry {
+  id             String        @id @default(cuid())
+  buyerId        String
+  manufacturerId String
+  productId      String?
+  subject        String
+  message        String
+  status         InquiryStatus @default(PENDING)
+  response       String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  buyer        Buyer        @relation(fields: [buyerId], references: [id])
+  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
+  product      Product?     @relation(fields: [productId], references: [id])
+}
+
+enum InquiryStatus {
+  PENDING
+  RESPONDED
+  CLOSED
+  IGNORED
+}

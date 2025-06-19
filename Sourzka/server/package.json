@@ -1,0 +1,44 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "start:prod": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "seed:admins": "tsx src/scripts/seed-admins.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.10.0",
+    "axios": "^1.10.0",
+    "bcrypt": "^6.0.0",
+    "cheerio": "^1.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
+    "hpp": "^0.2.3",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "zod": "^3.25.42"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.9.36",
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.18",
+    "@types/express": "^5.0.2",
+    "@types/hpp": "^0.2.6",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.15.24",
+    "prisma": "^6.10.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

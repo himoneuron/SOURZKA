@@ -1,0 +1,15 @@
+services:
+  postgres:
+    container_name: sourzka-db
+    image: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: sourzka
+      POSTGRES_PASSWORD: sourzka
+      POSTGRES_DB: sourzka
+
+volumes:
+  postgres_data:
