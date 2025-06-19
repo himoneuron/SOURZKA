@@ -1,3 +1,0 @@
-## Buyer
-
-## Manufacturer
